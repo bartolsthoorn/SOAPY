@@ -79,11 +79,7 @@ def environment_kernel(environment_Ai, environment_Bj):
     r_j = r_j.reshape(-1,1)
     
     part1 = prefactor*np.exp(-alpha*(np.power(r_i,2)+np.power(r_j,2))/2.)
-    
-    spherical_in_inside = 2*alpha*r_i*r_j
-    l = np.arange(l_max).reshape(-1,1,1)
-    part2 = spherical_in(l,spherical_in_inside)
-    
+    part2 = spherical_in(np.arange(l_max).reshape(-1,1,1),2*alpha*r_i*r_j)
     part3 = sph_harm(repeated_m, repeated_l, theta_i, phi_i)
     part4 = np.conj(sph_harm(repeated_m, repeated_l, theta_j, phi_j))
     
