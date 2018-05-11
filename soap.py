@@ -80,8 +80,8 @@ def environment_kernel(environment_Ai, environment_Bj):
     
     part1 = prefactor*np.exp(-alpha*(np.power(r_i,2)+np.power(r_j,2))/2.)
     
-    spherical_in_inside = np.broadcast_to(2*alpha*r_i*r_j, (l_max,n_j,n_i))
-    l = np.broadcast_to(np.arange(l_max),(n_i,n_j,l_max)).T
+    spherical_in_inside = 2*alpha*r_i*r_j
+    l = np.arange(l_max).reshape(-1,1,1)
     part2 = spherical_in(l,spherical_in_inside)
     
     part3 = sph_harm(repeated_m, repeated_l, theta_i, phi_i)
