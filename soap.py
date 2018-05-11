@@ -56,9 +56,9 @@ def I_sum(part1, part2, part3, part4):
     n_j = part1.shape[0]
     for l in range(l_max):
         for m_i in range(-l, l+1):
-            l_m_i = np.where((repeated_l == l) & (repeated_m == m_i))[0][0]
+            l_m_i = m_i+l**2+l
             for m_j in range(-l, l+1):
-                l_m_j = np.where((repeated_l == l) & (repeated_m == m_j))[0][0]
+                l_m_j = m_j+l**2+l
                 
                 pair_result = np.complex(0,0)
                 for r_i in range(n_i):
