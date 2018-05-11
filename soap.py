@@ -14,6 +14,7 @@ parser.add_argument('--lmax', type=int, default=6, help='maximum l')
 parser.add_argument('--alpha', type=int, default=.5, help='gaussian width')
 parser.add_argument('--rc', type=float, default=2.5, help='radial cut-off in angstrom')
 parser.add_argument('--nocenter', nargs="+", type=int, help='atomic numbers to skip as centers (e.g. --nocenter 1 2)')
+parser.add_argument('--approximate', action='store_true', help='approximate Spherical Bessel function')
 opt = parser.parse_args()
 
 
@@ -24,6 +25,13 @@ alpha = opt.alpha
 repeated_l = np.repeat(np.arange(l_max), np.arange(1,l_max*2,2)).reshape(-1,1)
 repeated_m = [[m for m in np.arange(-l, l+1)] for l in np.arange(l_max)]
 repeated_m = np.array([item for sublist in repeated_m for item in sublist]).reshape(-1,1)
+
+
+# Approximate Modified Spherical Bessel Function of the First Kind
+spherical_in_bins = np.linspace(0,alpha*opt.rc*opt.rc,100000)
+spherical_in_cache = spherical_in(np.arange(0,l_max).reshape(-1,1), spherical_in_bins)[np.arange(l_max)]
+def approximate_spherical_in(r):
+    return np.take(spherical_in_cache, np.digitize(r, spherical_in_bins)-1, axis=1)
 
 
 @jit(nopython=True)
@@ -55,20 +63,21 @@ def I_sum(part1, part2, part3, part4):
     n_i = part1.shape[1]
     n_j = part1.shape[0]
     for l in range(l_max):
+        prefactor = 8*np.power(np.pi,2)/(2*l+1)
         for m_i in range(-l, l+1):
             l_m_i = m_i+l**2+l
             for m_j in range(-l, l+1):
                 l_m_j = m_j+l**2+l
-                
+
                 pair_result = np.complex(0,0)
                 for r_i in range(n_i):
                     for r_j in range(n_j):
                         pair_result += part1[r_j,r_i] * part2[l, r_j, r_i] * part3[l_m_i,r_i] * part4[l_m_j,r_j]
-                result += 8*np.power(np.pi,2)/(2*l+1)*((np.conj(pair_result) * pair_result).real)
+                result += prefactor*((np.conj(pair_result) * pair_result).real)
     return result
 
 
-prefactor = np.sqrt(2*np.power(np.pi,5)/np.power(alpha,3))
+prefactor1 = np.sqrt(2*np.power(np.pi,5)/np.power(alpha,3))
 def environment_kernel(environment_Ai, environment_Bj):
     r_i, theta_i, phi_i = environment_Ai
     r_j, theta_j, phi_j = environment_Bj
@@ -78,8 +87,11 @@ def environment_kernel(environment_Ai, environment_Bj):
     r_i = np.broadcast_to(r_i, (n_j, n_i))
     r_j = r_j.reshape(-1,1)
     
-    part1 = prefactor*np.exp(-alpha*(np.power(r_i,2)+np.power(r_j,2))/2.)
-    part2 = spherical_in(np.arange(l_max).reshape(-1,1,1),2*alpha*r_i*r_j)
+    part1 = prefactor1*np.exp(-alpha*(np.power(r_i,2)+np.power(r_j,2))/2.)
+    if opt.approximate:
+        part2 = approximate_spherical_in(2*alpha*r_i*r_j)
+    else:
+        part2 = spherical_in(np.arange(l_max).reshape(-1,1,1),2*alpha*r_i*r_j)
     part3 = sph_harm(repeated_m, repeated_l, theta_i, phi_i)
     part4 = np.conj(sph_harm(repeated_m, repeated_l, theta_j, phi_j))
     
